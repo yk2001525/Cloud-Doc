@@ -3,3 +3,9 @@
   border: none;
   color: inherit;
 }
+.c-link{
+  cursor: pointer;
+}
+.file-item{
+  width: 100%;
+}
