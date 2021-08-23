@@ -41,7 +41,7 @@ export default function FileList({
     <ul className="list-group list-group-flush file-list">
       {files.map((file) => (
         <li 
-          className="list-group-item row bg-light d-flex align-items-center file-item"
+          className="list-group-item row bg-light d-flex align-items-center file-item mx-0"
           key={file.id}
         >
             {   (file.id !== editStates) && 
@@ -51,17 +51,17 @@ export default function FileList({
                 </span>
                 <span
                   onClick={()=>{onFileClick(file.id)}}
-                className="col-8 c-link">{file.title}</span>
+                className="col-6 c-link">{file.title}</span>
                 <button
                   type="button"
-                  className="icon-button col-1"
+                  className="icon-button col-2"
                   onClick={() => {setEditStates(file.id);setValue(file.title)}}
                 >
                   <FontAwesomeIcon title="编辑" size="lg" icon={faEdit} />
                 </button>
                 <button
                   type="button"
-                  className="icon-button col-1"
+                  className="icon-button col-2"
                   onClick={() => {onFileDelete(file.id)}}
                 >
                   <FontAwesomeIcon title="删除" size="lg" icon={faTrash} />
