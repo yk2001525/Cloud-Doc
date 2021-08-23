@@ -20,21 +20,39 @@ export default function FileList({
 }) {
     const [editStates,setEditStates] = useState(false)
     const [value,setValue] = useState('')
+    let node = useRef(null)
     const enterPressed = useKeyPress(13)
     const escPressed = useKeyPress(27)
-    const closeSearch = ()=>{
+    const closeSearch = (editItem)=>{
         setEditStates(false)
         setValue('')
+        //if we are editing a newly created file,we should delete this file when pressing esc
+        if(editItem.isNew){
+            onFileDelete(editItem.id)
+        }
     }
-    useEffect(()=>{
-        if(enterPressed && editStates){
-            const editItem = files.find(file=>file.id === editStates)
-                    onSaveEdit(editItem.id,value)
+    useEffect(()=>{ 
+        const editItem = files.find(file=>file.id === editStates)
+        if(enterPressed && editStates && value.trim()!== ''){
+                    onSaveEdit(editItem.id,value,editItem.isNew)
                     setEditStates(false)
                     setValue('')
         }
         if(escPressed && editStates){
-              closeSearch()
+              closeSearch(editItem)
+        }
+    })
+    useEffect(()=>{
+        const newFile = files.find(file=>file.isNew)
+        // console.log(newFile)
+        if(newFile){
+            setEditStates(newFile.id)
+            setValue(newFile.title)
+        }
+    },[files])
+    useEffect(()=>{
+        if(editStates){
+            node.current.focus()
         }
     })
   return (
@@ -44,7 +62,7 @@ export default function FileList({
           className="list-group-item row bg-light d-flex align-items-center file-item mx-0"
           key={file.id}
         >
-            {   (file.id !== editStates) && 
+            {   (file.id !== editStates && !file.isNew) && 
             <>
                   <span className="col-2">
                   <FontAwesomeIcon size="lg" icon={faMarkdown} />
@@ -71,20 +89,22 @@ export default function FileList({
                   
             }
             {
-                (file.id === editStates) && 
+                ((file.id === editStates) || file.isNew) && 
                 <>
                 <input
                 style={{width:83+'%'}}
                   className="form-control col-10"
+                  ref={node}
                   onChange={(e) => {
                     setValue(e.target.value);
                   }}
                   value={value}
+                  placeholder="请输入文件名称"
                 />
                 <button
                   type="button"
                   className="icon-button col-2"
-                  onClick={closeSearch}
+                  onClick={()=>{closeSearch(file)}}
                 >
                   <FontAwesomeIcon title="关闭" size="lg" icon={faTimes}/>
                 </button>
