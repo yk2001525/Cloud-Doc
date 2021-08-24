@@ -4,6 +4,13 @@ import { faEdit, faTrash,faTimes } from "@fortawesome/free-solid-svg-icons";
 import { faMarkdown } from "@fortawesome/free-brands-svg-icons";
 import PropTypes from "prop-types";
 import useKeyPress from '../hooks/useKeyPress'
+import useContextMenu from "../hooks/useContextMenu";
+import { getParentNode } from "../utils/helper";
+
+//require node.js modules
+// const { join,basename,extname,dirname } = window.require("path");
+const { remote } = window.require("electron");
+const { Menu,MenuItem } = remote
 
 FileList.propTypes = {
   files: PropTypes.array,
@@ -31,6 +38,38 @@ export default function FileList({
             onFileDelete(editItem.id)
         }
     }
+ const clickedItem = useContextMenu([
+        {
+            label:'打开',
+            click:()=>{
+                const parentElement = getParentNode(clickedItem.current,'file-item')
+                if(parentElement){
+                    onFileClick(parentElement.dataset.id)
+                }
+            }
+        },
+        {
+            label:'重命名',
+            click:()=>{
+                const parentElement = getParentNode(clickedItem.current,'file-item')
+                if(parentElement){
+                    const { id, title } = parentElement.dataset
+                    setEditStates(id)
+                    setValue(title)
+                }
+            }
+        },
+        {
+            label:'删除',
+            click:()=>{
+                const parentElement = getParentNode(clickedItem.current,'file-item')
+                if(parentElement){
+                    onFileDelete(parentElement.dataset.id)
+                }
+            }
+        }
+        
+    ],'.file-list',[files])
     useEffect(()=>{ 
         const editItem = files.find(file=>file.id === editStates)
         if(enterPressed && editStates && value.trim()!== ''){
@@ -61,6 +100,8 @@ export default function FileList({
         <li 
           className="list-group-item row bg-light d-flex align-items-center file-item mx-0"
           key={file.id}
+          data-id={file.id}
+          data-title={file.title}
         >
             {   (file.id !== editStates && !file.isNew) && 
             <>
