@@ -1,5 +1,5 @@
 import "./App.css";
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import SimpleMDE from "react-simplemde-editor";
 import uuidv4 from "uuid/dist/v4";
@@ -11,14 +11,16 @@ import FileList from "./components/FileList";
 
 import BottomBtn from "./components/BottomBtn";
 import TabList from "./components/TabList";
+import useIpcRenderer from "./utils/useIpcRenderer";
 import { faPlus, faFileImport,faSave } from "@fortawesome/free-solid-svg-icons";
 
 //require node.js modules
 const { join,basename,extname,dirname } = window.require("path");
-const { remote } = window.require("electron");
+const { remote,ipcRenderer } = window.require("electron");
 const Store = window.require('electron-store')
 
 const fileStore = new Store({'name':'Files Data'})
+const settingsStore = new Store({'name':'Settings'})
 
 const saveFilesToStore = (files)=>{
   //we don't have to store any info in file system, eg: isNew,body,etc
@@ -43,7 +45,7 @@ function App() {
   const [searchedFiles, setSearchedFiles] = useState([]);
   const filesArr = objToArr(files);
 
-  const savedLocation = remote.app.getPath("desktop");
+  const savedLocation = settingsStore.get('savedFileLocation') || remote.app.getPath("desktop");
 
   const activeFile = files[activeFileID];
   const openedFiles = openedFileIDs.map((openID) => {
@@ -79,11 +81,15 @@ function App() {
     }
   };
   const fileChange = (id, value) => {
-    const newFile = { ...files[id], body: value };
-    setFiles({ ...files, [id]: newFile });
-    if (!unsavedFileIDs.includes(id)) {
-      setUnsavedFileIDs([...unsavedFileIDs, id]);
+    if(value !== files[id].body){ 
+      console.log(value,files[id].body)
+      const newFile = { ...files[id], body: value };
+      setFiles({ ...files, [id]: newFile });
+      if (!unsavedFileIDs.includes(id)) {
+        setUnsavedFileIDs([...unsavedFileIDs, id]);
+      }
     }
+
   };
   const deleteFile = (id) => {
     if(files[id].isNew){
@@ -143,11 +149,15 @@ function App() {
     setFiles({ ...files, [newID]: newFile });
   };
   const saveCurrentFile = ()=>{
+    console.log('11',activeFile)
+    if(activeFile){
     fileHelper.writeFile(activeFile.path,
     activeFile.body
     ).then(()=>{
       setUnsavedFileIDs(unsavedFileIDs.filter(id=>id!==activeFile.id))
     })
+    }
+
   }
   const importFiles=()=>{
     remote.dialog.showOpenDialog({
@@ -187,6 +197,12 @@ function App() {
       }
     })
   }
+
+  useIpcRenderer({
+    'create-new-file':createNewFile,
+    'import-file':importFiles,
+    'save-edit-file':saveCurrentFile
+  })
   return (
     <div className="App container-fluid px-0">
       <div className="row g-0">
@@ -246,12 +262,12 @@ function App() {
                   fileChange(activeFile.id, value);
                 }}
               />
-                <BottomBtn
+                {/* <BottomBtn
                 text="保存"
                 colorClass="btn-success"
                 icon={faSave}
                 onBtnClick={saveCurrentFile}
-              ></BottomBtn>
+              ></BottomBtn> */}
             </>
           )}
         </div>

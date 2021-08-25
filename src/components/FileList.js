@@ -111,7 +111,7 @@ export default function FileList({
                 <span
                   onClick={()=>{onFileClick(file.id)}}
                 className="col-6 c-link">{file.title}</span>
-                <button
+                {/* <button
                   type="button"
                   className="icon-button col-2"
                   onClick={() => {setEditStates(file.id);setValue(file.title)}}
@@ -124,7 +124,7 @@ export default function FileList({
                   onClick={() => {onFileDelete(file.id)}}
                 >
                   <FontAwesomeIcon title="删除" size="lg" icon={faTrash} />
-                </button>
+                </button> */}
                 </>
 
                   
