@@ -11,6 +11,7 @@ import FileList from "./components/FileList";
 
 import BottomBtn from "./components/BottomBtn";
 import TabList from "./components/TabList";
+import Loader from "./components/Loader";
 import useIpcRenderer from "./utils/useIpcRenderer";
 import { faPlus, faFileImport,faSave } from "@fortawesome/free-solid-svg-icons";
 
@@ -251,6 +252,7 @@ function App() {
   })
   return (
     <div className="App container-fluid px-0">
+      <Loader/>
       <div className="row g-0">
         <div className="col-3 bg-light left-panel">
           <FileSearch
