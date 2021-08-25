@@ -320,6 +320,8 @@ function App() {
                 key={activeFile && activeFile.id}
                 options={{
                   minHeight: "515px",
+                  spellChecker:false,
+                  autofocus:true
                 }}
                 value={activeFile && activeFile.body}
                 // onChange={(value) => {
