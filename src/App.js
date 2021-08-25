@@ -47,6 +47,7 @@ function App() {
   const [openedFileIDs, setOpenedFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchedFiles, setSearchedFiles] = useState([]);
+  const [isLoading,setLoading] = useState(false)
   const filesArr = objToArr(files);
 
   const savedLocation = settingsStore.get('savedFileLocation') || remote.app.getPath("desktop");
@@ -243,16 +244,34 @@ function App() {
 
     })
   }
+  const filesUploaded = ()=>{
+    const newFiles = objToArr(files).reduce((result,file)=>{
+      const currentTime = new Date().getTime()
+      result[file.id]={
+        ...files[file.id],
+        isSynced:true,
+        updatedAt:currentTime
+      }
+      return result
+    },{})
+    setFiles(newFiles)
+    saveFilesToStore(newFiles)
+  }
   useIpcRenderer({
     'create-new-file':createNewFile,
     'import-file':importFiles,
     'save-edit-file':saveCurrentFile,
     'active-file-uploaded':activeFileUploaded,
     'file-downloaded':activeFileDownloaded,
+    'loading-status':(message,status)=>{setLoading(status)},
+    'files-uploaded':filesUploaded
   })
   return (
     <div className="App container-fluid px-0">
-      <Loader/>
+     {
+       isLoading &&
+       <Loader/>
+     } 
       <div className="row g-0">
         <div className="col-3 bg-light left-panel">
           <FileSearch

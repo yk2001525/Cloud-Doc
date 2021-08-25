@@ -76,6 +76,31 @@ app.on('ready',()=>{
         })
 
     })
+    ipcMain.on('upload-all-to-qiniu',()=>{
+        mainWindow.webContents.send('loading-status',true)
+        const filesObj = fileStore.get('files') || {}
+        const manager = createManager()
+        console.log(filesObj)
+        console.log(Object.keys(filesObj))  //将对象filesObj中的全部keys取出，组成新的数组
+        const uploadPromiseArr = Object.keys(filesObj).map(key=>{
+            const file = filesObj[key]
+            return manager.uploadFile(`${file.title}`,file.path)
+        })
+        Promise.all(uploadPromiseArr).then(result=>{
+            console.log(result)
+            //show uploaded message
+            dialog.showMessageBox({
+                type:'info',
+                title:`成功上传了${result.length}个文件`,
+                message:`成功上传了${result.length}个文件`
+            })
+            mainWindow.webContents.send('files-uploaded')
+        }).catch(()=>{
+            dialog.showErrorBox('同步失败','请检查七牛云参数是否正确')
+        }).finally(()=>{
+            mainWindow.webContents.send('loading-status',false)
+        })
+    })
     ipcMain.on('config-is-saved',()=>{
         let qinuMenu = process.platform === 'darwin' ? menu.items[3] : menu.items[2]
         const switchItems = (toggle)=>{
