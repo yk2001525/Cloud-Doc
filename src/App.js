@@ -3,7 +3,7 @@ import React, { useState,useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import SimpleMDE from "react-simplemde-editor";
 import uuidv4 from "uuid/dist/v4";
-import { flattenArr, objToArr } from "./utils/helper";
+import { flattenArr, objToArr,timestampToString } from "./utils/helper";
 import fileHelper from "./utils/fileHelper";
 import "easymde/dist/easymde.min.css";
 import FileSearch from "./components/FileSearch";
@@ -21,16 +21,19 @@ const Store = window.require('electron-store')
 
 const fileStore = new Store({'name':'Files Data'})
 const settingsStore = new Store({'name':'Settings'})
+const getAutoSync = ()=> ['accessKey', 'secretKey', 'bucketName','enableAutoSync'].every(key => !!settingsStore.get(key))
 
 const saveFilesToStore = (files)=>{
   //we don't have to store any info in file system, eg: isNew,body,etc
   const filesStoreObj = objToArr(files).reduce((result,file)=>{
-    const {id,path,title,createdAt} = file
+    const {id,path,title,createdAt,isSynced,updatedAt} = file
     result[id]={
       id,
       path,
       title,
-      createdAt
+      createdAt,
+      isSynced,
+      updatedAt
     }
     return result
   },{})
@@ -54,13 +57,25 @@ function App() {
   const fileListArr = searchedFiles.length > 0 ? searchedFiles : filesArr;
 
   const fileClick = (fileID) => {
+
     setActiveFileID(fileID);
     const currentFile = files[fileID]
+    const { id,title,path,isLoaded} = currentFile
+
     if(!currentFile.isLoaded){
-      fileHelper.readFile(currentFile.path).then(value=>{
-        const newFile = {...files[fileID],body:value,isLoaded:true}
-        setFiles({...files,[fileID]:newFile})
-      })
+      if(getAutoSync()){
+        ipcRenderer.send('download-file',{
+          key:`${title}.md`,
+          path,
+          id
+        })
+      }else{
+        fileHelper.readFile(currentFile.path).then(value=>{
+          const newFile = {...files[fileID],body:value,isLoaded:true}
+          setFiles({...files,[fileID]:newFile})
+        })
+      }
+     
     }
     if (!openedFileIDs.includes(fileID)) {
       setOpenedFileIDs([...openedFileIDs, fileID]);
@@ -149,12 +164,19 @@ function App() {
     setFiles({ ...files, [newID]: newFile });
   };
   const saveCurrentFile = ()=>{
-    console.log('11',activeFile)
+
     if(activeFile){
-    fileHelper.writeFile(activeFile.path,
-    activeFile.body
+      const {path,body,title} = activeFile
+    fileHelper.writeFile(path,
+    body
     ).then(()=>{
       setUnsavedFileIDs(unsavedFileIDs.filter(id=>id!==activeFile.id))
+      if(getAutoSync()){
+        ipcRenderer.send('upload-file',{
+          key:`${title}.md`,
+          path
+        })
+      }
     })
     }
 
@@ -197,11 +219,35 @@ function App() {
       }
     })
   }
+  const activeFileUploaded =()=>{
+    const {id} = activeFile
+    const modifiedFile = {...files[id],isSynced:true,updatedAt:new Date().getTime()}
+    const newFiles = {...files,[id]:modifiedFile}
+    setFiles(newFiles)
+    saveFilesToStore(newFiles)
+  }
+  const activeFileDownloaded = (event,message)=>{
+    const currentFile = files[message.id]
+    const {id,path} = currentFile
+    fileHelper.readFile(path).then(value=>{
+      let newFile
+      if(message.status === 'download-success'){
+        newFile = {...files[id],body:value,isLoaded:true,isSynced:true,updatedAt:new Date().getTime()}
+      }else{
+        newFile = {...files[id],body:value,isLoaded:true}
+      }
+      const newFiles = {...files,[id]:newFile}
+      setFiles(newFiles)
+      saveFilesToStore(newFiles)
 
+    })
+  }
   useIpcRenderer({
     'create-new-file':createNewFile,
     'import-file':importFiles,
-    'save-edit-file':saveCurrentFile
+    'save-edit-file':saveCurrentFile,
+    'active-file-uploaded':activeFileUploaded,
+    'file-downloaded':activeFileDownloaded,
   })
   return (
     <div className="App container-fluid px-0">
@@ -262,12 +308,11 @@ function App() {
                   fileChange(activeFile.id, value);
                 }}
               />
-                {/* <BottomBtn
-                text="保存"
-                colorClass="btn-success"
-                icon={faSave}
-                onBtnClick={saveCurrentFile}
-              ></BottomBtn> */}
+              {activeFile.isSynced && 
+                <span className="sync-status">
+                  已同步，上次同步时间{timestampToString(activeFile.updatedAt)}
+                </span>
+              }
             </>
           )}
         </div>
